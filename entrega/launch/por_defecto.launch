@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="entrega" type="mover_derecha.py" name="move_aprendizaje" output="screen"/>
+
+</launch>

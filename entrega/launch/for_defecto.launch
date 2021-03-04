@@ -1,0 +1,4 @@
+<launch>
+    <node pkg="entrega" type="move_derecha.py" name="move_turtlebot" output="screen"/>
+
+</launch>
