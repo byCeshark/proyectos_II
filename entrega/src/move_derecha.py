@@ -5,97 +5,108 @@ import numpy as np
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
 
-range_ahead, range_right, range_left, range_120, range_60 = 5, 5, 5, 5, 5
+
+""" LA VELOCIDAD DEL ROBOT VA A SER SUPERIOR A LA 
+    EMPLEADA PARA EL REAL, ACELERANDO LA MUESTRA 
+    DEL PROGRAMA Y EL COMPORTAMIENTO PARA EL VIDEO """
+
+front_range = 5
+right_range = 5
+left_range  = 5 
+range_fright = 5  
+#equivalente al /kinetic max_range 
+
 
 def callback(msg):
-    global range_ahead, range_right, range_left, range_60, range_120
-
-    #float32 angle_min  , start angle of the scan [rad]
-    #float32 angle_max   , end angle of the scan [rad]
-    # with zero angle being forward along the x axis
     
-    #Podemos ver las caracteristicas de barrido....
-    #rospy.loginfo("angle min %f",msg.angle_min)
-    #rospy.loginfo("angle max %f",msg.angle_max)
-    #rospy.loginfo("angle_increment %f",msg.angle_increment)  # angular distance between measurements [rad]
+    global front_range, right_range, left_range, range_fright
+
+    front_range = msg.ranges[len(msg.ranges)/2]  
+    right_range = msg.ranges[0]  
+    left_range  = msg.ranges[-1]  #no es necesaria su inicializacion pero se deja por caso de ser necesaria
+
+    position_degree = 3
+    range_fright  = msg.ranges[len(msg.ranges)/(2*position_degree)]  #rango entre el frente del robot y su derecha
+    #range_120 = msg.ranges[-len(msg.ranges)/3] #rango de 120 degrees
+
+
+def follow_wall():
+
+
+    umbral_right = 4.0
+    vel_turn = abs(( (umbral_right - right_range ) * 0.1) + 1.0)
+    #creo una variable para ajustar la velocidad en aquellas situaciones donde se presenta una distancia critica para el funcionamiento
+    #actua de manera que cuanto mayor sea la diferencia entre el umbral definido a la derecha y la distancia de este mismo lado,
+    #mas lenta sera la velocidad de giro en el eje Z y al irse acercando a un obstaculo esta velocidad ira aumentando con el siguiente principio
+
+
+
+    """Utilizo el sensor laser kinetic para la realizacion de la prueba del robot y la deteccion de paredes u obstaculos a su derecha"""
     
-    #anglemin=np.rad2deg(msg.angle_min)
-    #anglemax=np.rad2deg(msg.angle_max)
-    #angleincrement=np.rad2deg(msg.angle_increment)
-    #rospy.loginfo ("deg min %f",anglemin)
-    #rospy.loginfo ("deg max %f",anglemax)
-    #rospy.loginfo("deg increment %f",angleincrement)
 
-    #Podemos ver los valores devueltos por el escaner laser
-    #for i in range (0,len(msg.ranges),1):
-    #    currentangle=anglemin+i*angleincrement
-    #    rospy.loginfo ("i %d current angle %f distance %f",i,currentangle,msg.ranges[i])
-
-    #coge haz laser hacia la mitad del array...
-
-
-
-    range_ahead=msg.ranges[len(msg.ranges)/2]  
-    range_right=msg.ranges[0]  
-    range_left=msg.ranges[-1]  
-    range_60=msg.ranges[len(msg.ranges)/6]  #aumentar el numero en el que dividir?
-    range_120=msg.ranges[-len(msg.ranges)/3]
-
-
-def dodge_and_follow():
     rospy.init_node ('move_turtlebot')
     pub=rospy.Publisher('/mobile_base/commands/velocity',Twist,queue_size=1)
-    scan_sub=rospy.Subscriber('/kinetic',LaserScan,callback)
+    scan_sub=rospy.Subscriber('/kinetic',LaserScan,callback) #sensor kinetic
+    
     rate=rospy.Rate(20)
     move=Twist()
 
-    umbral_derecho = 4.0
-    vel_turn = abs(( (umbral_derecho - range_right ) * 0.1) + 1.0)
-    #cosas como factores de los que dependa la velocidad de giro o de movimiento segun ciertas distancias estudidas.
+    dist_limit  = 0.5
 
-
-    #print ("distancia delante ",range_ahead)
-    """Utilizo el sensor laser kinetic para la realizacion de la prueba del robot y deteccion de paredes"""
-    
     while not rospy.is_shutdown():
     
-        if range_ahead > 0.5 and range_right < 1.5: #el robot se debe mover mientras no detecte un objeto al frente y al encontrarse cerca de una pared.
+
+        if front_range > dist_limit and right_range < 1.5: #el robot se debe mover mientras no detecte un objeto al frente y al encontrarse cerca de una pared.
             move.linear.x = 0.5
             move.angular.z = 0.0
             print("\n")
             print("moviendo..")
-            print ("dist frente -->",range_ahead)
+            print ("distancia frente -->",front_range)
 
-        elif range_ahead < 1.0:
+            if right_range < 1.0:
+                print ("distancia derecha -->",right_range)
+
+
+        elif front_range < dist_limit*2:
             move.linear.x = 0.0
             move.angular.z = 0.5
             print("\n")
             print("rotando..")
-            print ("dist frente -->",range_ahead)
+            print ("distancia frente -->",front_range)
 
-        elif range_right > 2.0 and range_60 > 1.0: #revisar el 1.8
-            move.linear.x = 0.5
-            move.angular.z = -vel_turn #-v_giro (necesito ajustarla mejor de manera que se comporte mejor en ciertas partes)
-            print("\n")
-            print("rotando..")
-            print ("dist der -->",range_right)
 
-        elif  range_60 > umbral_derecho: #modificar velocidad giro segun las distancias detectadas
+        elif right_range > 2.0 and range_fright > 1.0: #en caso de que detecta un campo vacio
             move.linear.x = 0.5
             move.angular.z = -vel_turn
             print("\n")
             print("rotando..")
-            print ("dist 60 -->",range_60)
+            print ("distancia derecha -->",right_range)
 
 
+        elif range_fright > umbral_right: #modificar velocidad giro segun las distancias detectadas
+            move.linear.x = 0.5
+            move.angular.z = -vel_turn
+            print("\n")
+            print("rotando..")
+            print ("distancia lateral -->",range_fright)
 
-        if range_60 < 1.6:   # o 1.8
+
+        #Grupo de condicionales que rompan con los niveles anteriores forzando un giro cuando el sensor intermedio entre la el frente y la derecha del robot, detecta cerca una pared.
+        
+        # Distancias que me han parecido las mas adecuadas para la seguridad y control del turtlebot
+        if range_fright < 1.6:
             move.linear.x = 0.3
             move.angular.z = 0.8
+            print("\n")
+            print("rotando..")
+            print ("distancia frente derecha -->",range_fright)
 
-        elif range_60 < 1.2 and range_ahead < 0.5:
+        elif range_fright < 1.2 and front_range < 0.5:
             move.linear.x = 0.0
             move.angular.z = 0.5
+            print("\n")
+            print("rotando..")
+            print ("distancia frente derecha -->",range_fright)
 
 
         pub.publish(move)
@@ -107,7 +118,9 @@ def dodge_and_follow():
 if __name__ == '__main__':
 	
     try:
-        dodge_and_follow()
+        follow_wall()
     except rospy.ROSInterruptException:
-        rospy.loginfo("terminando... ")
+        rospy.loginfo("terminando simulacion... ")
+
+        
 
