@@ -1,0 +1,5 @@
+<launch>
+	<node pkg="ejercicio12" type="simulacion_stage.py" name="move_turtle" output="screen">
+	</node>
+
+</launch>
