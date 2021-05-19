@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+
+<launch>
+
+    <!-- run pointcloud_to_laserscan node -->
+    <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="pointcloud_to_laserscan">
+
+        <!-- cloud_in represents from where we are getting the point cloud topic -->
+        <!-- remap from="cloud_in" to="/rslidar_points"-->
+        <remap from="cloud_in" to="/robot/lidar_3d/point_cloud"/>
+        <remap from="scan" to="/rslidar_summit/scan"/>
+        
+        <rosparam>
+            # target_frame: rslidar # Leave disabled to output scan in pointcloud frame
+            transform_tolerance: 0.01
+            min_height: -0.4
+            max_height: 1.0 #this specifies from which height we are going to get the points
+
+            angle_min: -3.1415926 # -M_PI
+            angle_max: 3.1415926 # M_PI
+            angle_increment: 0.003 # 0.17degree
+            scan_time: 0.1
+            range_min: 0.2
+            range_max: 100
+            use_inf: true #this means that if one point is detected further than range_max it will be published as inf
+            inf_epsilon: 1.0
+
+            # Concurrency level, affects number of pointclouds queued for processing and number of threads used
+            # 0 : Detect number of cores
+            # 1 : Single threaded
+            # 2->inf : Parallelism level
+            concurrency_level: 1
+        </rosparam>
+
+    </node>
+
+</launch>
