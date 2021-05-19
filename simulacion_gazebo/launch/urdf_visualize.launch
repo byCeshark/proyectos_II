@@ -1,0 +1,19 @@
+<launch>
+
+    <arg name="model" default=""/>
+
+    <param name="robot_description" command="cat $(arg model)"/>
+
+    <!-- arrancamos joint_state_publisher -->
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+        <param name="use_gui" value="TRUE"/>
+    </node>
+
+
+    <!-- arrancamos nodo -->
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher"/>
+
+    <!-- Mostramos en Rviz -->
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find mis_modelos_robots)/rviz_config/urdf.rviz"/>
+
+</launch>
